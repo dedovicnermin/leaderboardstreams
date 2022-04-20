@@ -1,9 +1,7 @@
-package tech.nermindedovic.leaderboardstreams.models;
+package tech.nermindedovic.leaderboardstreams.models.json;
 
 import lombok.Builder;
 import lombok.Data;
-
-import java.util.Comparator;
 
 @Data
 @Builder

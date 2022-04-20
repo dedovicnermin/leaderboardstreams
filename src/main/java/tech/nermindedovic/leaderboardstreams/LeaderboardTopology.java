@@ -5,8 +5,8 @@ import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.*;
-import tech.nermindedovic.leaderboardstreams.models.Leaderboard;
-import tech.nermindedovic.leaderboardstreams.models.ScorePlayerRecord;
+import tech.nermindedovic.leaderboardstreams.models.json.Leaderboard;
+import tech.nermindedovic.leaderboardstreams.models.json.ScorePlayerRecord;
 import tech.nermindedovic.leaderboardstreams.models.avro.Player;
 import tech.nermindedovic.leaderboardstreams.models.avro.Product;
 import tech.nermindedovic.leaderboardstreams.models.avro.ScoreEvent;
@@ -17,7 +17,6 @@ public class LeaderboardTopology {
     public static final String SCORE_EVENTS_TOPIC = "score-events";
     public static final String PLAYER_EVENTS_TOPIC = "player-events";
     public static final String PRODUCT_EVENTS_TOPIC = "product-events";
-
     public static final String OUTBOUND_TOPIC = "outbound-events";
 
     private static final Serde<Long> longSerdes = Serdes.Long();
@@ -54,6 +53,7 @@ public class LeaderboardTopology {
                 .aggregate(
                         Leaderboard::new,
                         (aLong, record, leaderboard) -> leaderboard.add(record),
+                        Named.as(LeaderboardService.LEADERBOARD_STORE_NAME),
                         Materialized.with(longSerdes, leaderboardSerdes)
                 );
     }

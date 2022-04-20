@@ -1,10 +1,11 @@
-package tech.nermindedovic.leaderboardstreams.models;
+package tech.nermindedovic.leaderboardstreams.models.json;
 
 import lombok.Data;
 
 import java.util.Comparator;
-import java.util.Set;
+import java.util.List;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 @Data
 public class Leaderboard {
@@ -21,7 +22,7 @@ public class Leaderboard {
         return this;
     }
 
-    public Set<ScorePlayerRecord> getLeaderboardRecords() {
-        return treeSet;
+    public List<ScorePlayerRecord> toList() {
+        return treeSet.stream().collect(Collectors.toUnmodifiableList());
     }
 }
