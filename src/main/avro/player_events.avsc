@@ -1,0 +1,19 @@
+{
+  "type": "record",
+  "namespace": "tech.nermindedovic.leaderboardstreams.models.avro",
+  "name": "Player",
+  "fields": [
+    {
+      "name": "id",
+      "type": "long"
+    },
+    {
+      "name": "name",
+      "type": "string"
+    },
+    {
+      "name": "DOB",
+      "type": "string"
+    }
+  ]
+}

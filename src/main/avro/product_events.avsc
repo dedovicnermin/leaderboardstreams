@@ -1,0 +1,15 @@
+{
+  "type": "record",
+  "namespace": "tech.nermindedovic.leaderboardstreams.models.avro",
+  "name": "Product",
+  "fields": [
+    {
+      "name": "id",
+      "type": "long"
+    },
+    {
+      "name": "name",
+      "type": "string"
+    }
+  ]
+}

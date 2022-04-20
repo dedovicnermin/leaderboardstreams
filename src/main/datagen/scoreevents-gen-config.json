@@ -1,0 +1,16 @@
+{
+  "name": "score-events-gen",
+  "config": {
+    "connector.class": "io.confluent.kafka.connect.datagen.DatagenConnector",
+    "kafka.topic": "score-events",
+    "schema.string": "{\"type\":\"record\",\"namespace\":\"tech.nermindedovic.leaderboardstreams.models.avro\",\"name\":\"ScoreEvent\",\"fields\":[{\"name\":\"playerId\",\"type\":{\"type\":\"long\",\"arg.properties\":{\"range\":{\"min\":1,\"max\":5}}}},{\"name\":\"productId\",\"type\":{\"type\":\"long\",\"arg.properties\":{\"options\":[100,200,300,400,500]}}},{\"name\":\"score\",\"type\":{\"type\":\"double\",\"range\":{\"min\":1}}}]}",
+    "schema.keyfield": "",
+    "key.converter": "org.apache.kafka.connect.storage.StringConverter",
+    "value.converter": "io.confluent.connect.avro.AvroConverter",
+    "value.converter.schema.registry.url": "http://schema-registry:8081",
+    "value.converter.schemas.enable": "true",
+    "max.interval": 10000,
+    "iterations": 500,
+    "tasks.max": 1
+  }
+}
