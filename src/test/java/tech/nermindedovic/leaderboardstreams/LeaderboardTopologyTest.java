@@ -24,6 +24,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Why? - TDD
  * How to run other tests:
  *   insert sink processor to OUTPUT_TOPIC with respective Produced.with(keyserdes, valueserdes)
+ *   after declaration of stream we're insterested in.
+ *   **As you move further down this test file, you will have to insert the sink further down the `.buildTopology()` method**
+ *
+ *   OR creating separate TestOutputTopics correlating with sink processors within building the topology
  */
 class LeaderboardTopologyTest {
     final LeaderboardTopology leaderboardTopology = new LeaderboardTopology();
