@@ -11,10 +11,7 @@ import tech.nermindedovic.leaderboardstreams.models.avro.Player;
 import tech.nermindedovic.leaderboardstreams.models.avro.Product;
 import tech.nermindedovic.leaderboardstreams.models.avro.ScoreEvent;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
+import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -136,6 +133,7 @@ class LeaderboardTopologyTest {
         final Product product = new Product(1L, "Hardest Game Ever");
         final List<KeyValue<Long, Player>> players = getThreePlayers();
         final List<KeyValue<String, ScoreEvent>> scoreEvents = getThreeScoreEvents();
+        Collections.shuffle(scoreEvents);
 
 
         productEventInput.pipeInput(product.getId(), product);

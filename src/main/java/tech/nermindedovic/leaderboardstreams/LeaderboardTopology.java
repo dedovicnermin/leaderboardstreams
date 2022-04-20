@@ -48,7 +48,13 @@ public class LeaderboardTopology {
         return builder.build();
     }
 
-    private KTable<Long, Leaderboard> getAggregate(KStream<Long, ScorePlayerRecord> enrichedRecordStream, Serde<ScorePlayerRecord> scorePlayerSerde) {
+    /**
+     * Group by key and aggregate
+     * @param enrichedRecordStream keyed by ProductID
+     * @param scorePlayerSerde enriched player card with all information needed for display
+     * @return table of top 5 players (leaderboard), keyed by product
+     */
+    private KTable<Long, Leaderboard> getAggregate(final KStream<Long, ScorePlayerRecord> enrichedRecordStream, final Serde<ScorePlayerRecord> scorePlayerSerde) {
         return enrichedRecordStream.groupByKey(Grouped.with(longSerdes,scorePlayerSerde))
                 .aggregate(
                         Leaderboard::new,
@@ -58,7 +64,13 @@ public class LeaderboardTopology {
                 );
     }
 
-    private KStream<Long, ScorePlayerRecord> enrichWithProductName(GlobalKTable<Long, Product> productEventTable, KStream<Long, ScorePlayerRecord> rekeyedScorePlayerStream) {
+    /**
+     * Enrich record with productName
+     * @param productEventTable containing product name, keyed by ID
+     * @param rekeyedScorePlayerStream  stream of records with player/score information, lacking product name (null)
+     * @return enriched playerscore record
+     */
+    private KStream<Long, ScorePlayerRecord> enrichWithProductName(final GlobalKTable<Long, Product> productEventTable, final KStream<Long, ScorePlayerRecord> rekeyedScorePlayerStream) {
         return rekeyedScorePlayerStream
                 .leftJoin(productEventTable, (aLong, record) -> aLong, (record, product) -> {
                     record.setProductName(product.getName().toString());
@@ -66,13 +78,28 @@ public class LeaderboardTopology {
                 });
     }
 
-    private KStream<Long, ScorePlayerRecord> getRekeyedScorePlayerStream(KStream<Long, ScorePlayerRecord> scorePlayerStream) {
+    /**
+     * Rekey enriched PlayerScoreRecord stream in order to satisfy co-partitioning requirement
+     * @param scorePlayerStream stream of enriched score events with player information
+     * @return rekeyed stream of ScorePlayerRecord
+     */
+    private KStream<Long, ScorePlayerRecord> getRekeyedScorePlayerStream(final KStream<Long, ScorePlayerRecord> scorePlayerStream) {
         return scorePlayerStream.selectKey(((aLong, scorePlayerRecord) -> scorePlayerRecord.getProductId()));
     }
 
+
+    /**
+     * ScoreEvent and Player event Stream-Table join
+     * @param scoreEventSerde serde for ScoreEvent
+     * @param playerEventSerde serde for PlayerEvent
+     * @param scoreEventStream stream of ScoreEvent records
+     * @param playerEventTable state store of Player event records
+     * @return enriched record containing score/player information
+     */
     private KStream<Long, ScorePlayerRecord> getScorePlayerStream(
-            Serde<ScoreEvent> scoreEventSerde, Serde<Player> playerEventSerde,
-            KStream<Long, ScoreEvent> scoreEventStream, KTable<Long, Player> playerEventTable
+            final Serde<ScoreEvent> scoreEventSerde, Serde<Player> playerEventSerde,
+            final KStream<Long, ScoreEvent> scoreEventStream,
+            final KTable<Long, Player> playerEventTable
     ) {
         return scoreEventStream
                 .leftJoin(
@@ -88,15 +115,31 @@ public class LeaderboardTopology {
                 );
     }
 
-    private GlobalKTable<Long, Product> createProductEventSource(Serde<Product> productEventSerde) {
+
+    /**
+     * Source processor for Product events
+     * @param productEventSerde serde for Product record, keyed by Long
+     * @return Global state store containing Product information, keyed by ID
+     */
+    private GlobalKTable<Long, Product> createProductEventSource(final Serde<Product> productEventSerde) {
         return builder.globalTable(PRODUCT_EVENTS_TOPIC, Consumed.with(longSerdes, productEventSerde));
     }
 
-    private KTable<Long, Player> createPlayerEventSource(Serde<Player> playerEventSerde) {
+    /**
+     * Source processor for Player events
+     * @param playerEventSerde serde for Player record, keyed by Long
+     * @return Sharded state store containing Player information, keyed by ID
+     */
+    private KTable<Long, Player> createPlayerEventSource(final Serde<Player> playerEventSerde) {
         return builder.table(PLAYER_EVENTS_TOPIC, Consumed.with(longSerdes, playerEventSerde));
     }
 
-    private KStream<Long, ScoreEvent> createScoreEventSourceProcessor(Serde<ScoreEvent> scoreEventSerde) {
+    /**
+     * Source processor for ScoreEvent records. Re-keyed in preparation for joining with Player.
+     * @param scoreEventSerde serde for ScoreEvent (NO KEY SENT ON INBOUND)
+     * @return Stream of ScoreEvent records
+     */
+    private KStream<Long, ScoreEvent> createScoreEventSourceProcessor(final Serde<ScoreEvent> scoreEventSerde) {
         return builder.stream(SCORE_EVENTS_TOPIC, Consumed.with(Serdes.String(), scoreEventSerde))
                 .selectKey(( key, scoreEvent ) -> scoreEvent.getPlayerId());
     }
