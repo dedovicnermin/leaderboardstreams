@@ -12,7 +12,6 @@ import tech.nermindedovic.leaderboardstreams.models.avro.Product;
 import tech.nermindedovic.leaderboardstreams.models.avro.ScoreEvent;
 
 import java.util.Map;
-import java.util.TreeMap;
 
 public class LeaderboardTopology {
     public static final String SCORE_EVENTS_TOPIC = "score-events";
@@ -22,6 +21,7 @@ public class LeaderboardTopology {
     public static final String OUTBOUND_TOPIC = "outbound-events";
 
     private static final Serde<Long> longSerdes = Serdes.Long();
+    private static final Serde<Leaderboard> leaderboardSerdes = StreamUtils.getJsonSerde(Leaderboard.class);
 
     final StreamsBuilder builder = new StreamsBuilder();
 
@@ -31,44 +31,39 @@ public class LeaderboardTopology {
         final Serde<Product> productEventSerde = StreamUtils.getAvroSerde(serdeConfig);
         final Serde<ScorePlayerRecord> scorePlayerSerde = StreamUtils.getJsonSerde(ScorePlayerRecord.class);
 
-
+        // source processors
         final KStream<Long, ScoreEvent> scoreEventStream = createScoreEventSourceProcessor(scoreEventSerde);
-        scoreEventStream.print(Printed.toSysOut());
-
-
         final KTable<Long, Player> playerEventTable = createPlayerEventSource(playerEventSerde);
+        final GlobalKTable<Long, Product> productEventTable = createProductEventSource(productEventSerde);
 
-
-        final GlobalKTable<Long, Product> productEventTable = getProductEventTable(productEventSerde);
-
+        // stream processors
         final KStream<Long, ScorePlayerRecord> scorePlayerStream = getScorePlayerStream(scoreEventSerde, playerEventSerde, scoreEventStream, playerEventTable);
-        scorePlayerStream.print(Printed.toSysOut());
-
         final KStream<Long, ScorePlayerRecord> rekeyedScorePlayerStream = getRekeyedScorePlayerStream(scorePlayerStream);
-        rekeyedScorePlayerStream.to(OUTBOUND_TOPIC, Produced.with(longSerdes, scorePlayerSerde));
+        final KStream<Long, ScorePlayerRecord> enrichedRecordStream = enrichWithProductName(productEventTable, rekeyedScorePlayerStream);
+        final KStream<Long, Leaderboard> stream = getAggregate(enrichedRecordStream, scorePlayerSerde).toStream();
+        stream.print(Printed.toSysOut());
 
-//        rekeyedScorePlayerStream.leftJoin(productEventTable)
-
-//        rekeyedScorePlayerStream.groupByKey()
-//                .aggregate(
-//                        new Initializer<Leaderboard>() {
-//                            @Override
-//                            public Leaderboard apply() {
-//                                return new Leaderboard();
-//                            }
-//                        },
-//                        new Aggregator<Long, ScorePlayerRecord, Leaderboard>() {
-//                            @Override
-//                            public Leaderboard apply(Long aLong, ScorePlayerRecord record, Leaderboard leaderboard) {
-//                                return null;
-//                            }
-//                        }
-//                )
-
+        //sink
+        stream.to(OUTBOUND_TOPIC, Produced.with(longSerdes, leaderboardSerdes));
 
         return builder.build();
+    }
 
+    private KTable<Long, Leaderboard> getAggregate(KStream<Long, ScorePlayerRecord> enrichedRecordStream, Serde<ScorePlayerRecord> scorePlayerSerde) {
+        return enrichedRecordStream.groupByKey(Grouped.with(longSerdes,scorePlayerSerde))
+                .aggregate(
+                        Leaderboard::new,
+                        (aLong, record, leaderboard) -> leaderboard.add(record),
+                        Materialized.with(longSerdes, leaderboardSerdes)
+                );
+    }
 
+    private KStream<Long, ScorePlayerRecord> enrichWithProductName(GlobalKTable<Long, Product> productEventTable, KStream<Long, ScorePlayerRecord> rekeyedScorePlayerStream) {
+        return rekeyedScorePlayerStream
+                .leftJoin(productEventTable, (aLong, record) -> aLong, (record, product) -> {
+                    record.setProductName(product.getName().toString());
+                    return record;
+                });
     }
 
     private KStream<Long, ScorePlayerRecord> getRekeyedScorePlayerStream(KStream<Long, ScorePlayerRecord> scorePlayerStream) {
@@ -89,11 +84,11 @@ public class LeaderboardTopology {
                                 .playerDOB(playerEvent.getDOB().toString())
                                 .score(scoreEvent.getScore())
                                 .build()
-                        , Joined.with(Serdes.Long(), scoreEventSerde, playerEventSerde)
+                        , Joined.with(longSerdes, scoreEventSerde, playerEventSerde)
                 );
     }
 
-    private GlobalKTable<Long, Product> getProductEventTable(Serde<Product> productEventSerde) {
+    private GlobalKTable<Long, Product> createProductEventSource(Serde<Product> productEventSerde) {
         return builder.globalTable(PRODUCT_EVENTS_TOPIC, Consumed.with(longSerdes, productEventSerde));
     }
 

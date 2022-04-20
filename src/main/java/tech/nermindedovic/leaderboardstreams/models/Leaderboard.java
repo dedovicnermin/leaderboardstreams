@@ -8,7 +8,12 @@ import java.util.TreeSet;
 
 @Data
 public class Leaderboard {
-    private final TreeSet<ScorePlayerRecord> treeSet = new TreeSet<>(Comparator.comparingDouble(ScorePlayerRecord::getScore));
+    static final Comparator<ScorePlayerRecord> scorePlayerRecordComparator = Comparator.comparingDouble(ScorePlayerRecord::getScore);
+    private final TreeSet<ScorePlayerRecord> treeSet;
+
+    public Leaderboard() {
+        this.treeSet = new TreeSet<>(scorePlayerRecordComparator);
+    }
 
     public Leaderboard add(final ScorePlayerRecord record) {
         treeSet.add(record);
