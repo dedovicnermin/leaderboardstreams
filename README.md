@@ -11,7 +11,12 @@
 - stream/globalKTable join
 - Avro(SOURCE)+Json(SINK)
 - Materialized ReadOnly state stores
-- api for querying state stores **to be cntd...*
+- api for querying state stores 
+  - `curl localhost:7000/leaderboard | jq .`
+  - `curl localhost:7000/leaderboard/count`
+  - `curl localhost:7000/leaderboard/count/local` (partitions must be > 1 in order for this to be effective)
+  - `curl localhost:7000/leaderboard/100/500 | jq .` (range of product ID's)
+  - `curl localhost:7000/leadboard/200` (query one leaderboard)
 
 ### View Topology
 1. [Go to Topology visualizer tool](https://zz85.github.io/kafka-streams-viz/)

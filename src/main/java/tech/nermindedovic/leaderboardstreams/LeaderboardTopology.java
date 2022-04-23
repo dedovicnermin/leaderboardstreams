@@ -2,9 +2,11 @@ package tech.nermindedovic.leaderboardstreams;
 
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.*;
+import org.apache.kafka.streams.state.KeyValueStore;
 import tech.nermindedovic.leaderboardstreams.models.json.Leaderboard;
 import tech.nermindedovic.leaderboardstreams.models.json.ScorePlayerRecord;
 import tech.nermindedovic.leaderboardstreams.models.avro.Player;
@@ -55,12 +57,15 @@ public class LeaderboardTopology {
      * @return table of top 5 players (leaderboard), keyed by product
      */
     private KTable<Long, Leaderboard> getAggregate(final KStream<Long, ScorePlayerRecord> enrichedRecordStream, final Serde<ScorePlayerRecord> scorePlayerSerde) {
+        final Initializer<Leaderboard> initializer = Leaderboard::new;
+        final Aggregator<Long, ScorePlayerRecord, Leaderboard> aggregator = (aLong, record, leaderboard) -> leaderboard.add(record);
         return enrichedRecordStream.groupByKey(Grouped.with(longSerdes,scorePlayerSerde))
                 .aggregate(
-                        Leaderboard::new,
-                        (aLong, record, leaderboard) -> leaderboard.add(record),
-                        Named.as(LeaderboardService.LEADERBOARD_STORE_NAME),
-                        Materialized.with(longSerdes, leaderboardSerdes)
+                        initializer,
+                        aggregator,
+                        Materialized.<Long, Leaderboard, KeyValueStore<Bytes, byte[]>>as(LeaderboardService.LEADERBOARD_STORE_NAME)
+                                .withKeySerde(longSerdes)
+                                .withValueSerde(leaderboardSerdes)
                 );
     }
 
