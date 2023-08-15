@@ -1,0 +1,32 @@
+{
+  "type": "record",
+  "name": "HistoricEntry",
+  "doc": "An entry within a leaderboard continously being updated",
+  "namespace": "io.nermdev.schemas.avro.leaderboards",
+  "fields": [
+    {
+      "name": "playerId",
+      "type": "long"
+    },
+    {
+      "name": "playerName",
+      "type": "string"
+    },
+    {
+      "name": "productId",
+      "type": "long"
+    },
+    {
+      "name": "productName",
+      "type": "string"
+    },
+    {
+      "name": "score",
+      "type": "double"
+    },
+    {
+      "name": "entries",
+      "type": "long"
+    }
+  ]
+}

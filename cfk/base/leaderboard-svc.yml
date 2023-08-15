@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: leaderboards-svc
+  labels:
+    app: leaderboard-streams
+spec:
+  clusterIP: None
+  selector:
+    app: leaderboard-streams

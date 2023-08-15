@@ -1,0 +1,19 @@
+# Project exclude paths
+.idea
+/target/
+/.idea/.gitignore
+/.idea/sonarlint/issuestore/0/c/0c7d2774e28d3260df079f3fd8ec11e9badbcfd7
+/.idea/aws.xml
+/.idea/sonarlint/issuestore/c/8/c8aec47dedc005b18bae8e33e87e59dd4fe8bb1a
+/.idea/compiler.xml
+/.idea/sonarlint/issuestore/index.pb
+/.idea/jarRepositories.xml
+/.idea/misc.xml
+/.idea/uiDesigner.xml
+/.idea/vcs.xml
+rest.http
+logs
+src/main/resources/mvn_schema_download
+src/main/resources/log
+
+http-client.env.json

@@ -1,5 +1,5 @@
 {
-  "name": "score-events-gen",
+  "name": "score-events-gen-2",
   "config": {
     "connector.class": "io.confluent.kafka.connect.datagen.DatagenConnector",
     "kafka.topic": "score-events",
@@ -9,8 +9,8 @@
     "value.converter": "io.confluent.connect.avro.AvroConverter",
     "value.converter.schema.registry.url": "http://schema-registry:8081",
     "value.converter.schemas.enable": "true",
-    "max.interval": 10000,
-    "iterations": 500,
+    "max.interval": 100,
+    "iterations": 50000,
     "tasks.max": 1
   }
 }

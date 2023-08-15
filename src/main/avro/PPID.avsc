@@ -1,0 +1,16 @@
+{
+  "type": "record",
+  "name": "PPID",
+  "doc": "P(player)P(roduct)ID - schema meant to represent the key of a KafkaRecord",
+  "namespace": "io.nermdev.schemas.avro.leaderboards",
+  "fields": [
+    {
+      "name": "playerId",
+      "type": "long"
+    },
+    {
+      "name": "productId",
+      "type": "long"
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: leaderboards
+spec:
+  selector:
+    matchLabels:
+      app: leaderboard-streams
+  serviceName: leaderboards-svc
+  volumeClaimTemplates:
+    - metadata:
+        name: leaderboards-state
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+
+  template:
+    metadata:
+      labels:
+        app: leaderboard-streams
+    spec:
+      containers:
+        - name: leaderboardstreams
+          image: dedovicnermin/leaderboard.streams:0.0.1
+          ports:
+            - containerPort: 7000
+
+          volumeMounts:
+            - mountPath: /data/leaderboards/state
+              name: leaderboards-state
+          resources:
+            requests:
+              cpu: 216m
+              memory: 516Mi
+
+
