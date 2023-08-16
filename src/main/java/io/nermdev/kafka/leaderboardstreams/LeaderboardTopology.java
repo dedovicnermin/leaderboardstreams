@@ -3,8 +3,9 @@ package io.nermdev.kafka.leaderboardstreams;
 
 import io.nermdev.kafka.leaderboardstreams.models.json.Leaderboard;
 import io.nermdev.kafka.leaderboardstreams.models.json.LeaderboardHistoric;
+import io.nermdev.kafka.leaderboardstreams.models.json.PPID;
 import io.nermdev.schemas.avro.leaderboards.HistoricEntry;
-import io.nermdev.schemas.avro.leaderboards.PPID;
+
 import io.nermdev.schemas.avro.leaderboards.ScoreCard;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
@@ -25,12 +26,10 @@ import org.apache.kafka.streams.state.KeyValueStore;
 import java.util.Map;
 
 public class LeaderboardTopology {
-
-
-
     private static final Serde<Long> longSerdes = Serdes.Long();
     private static final Serde<Leaderboard> leaderboardSerdes = StreamUtils.getJsonSerde(Leaderboard.class);
     private static final Serde<LeaderboardHistoric> leaderboardHistoricSerde = StreamUtils.getJsonSerde(LeaderboardHistoric.class);
+    private static final Serde<PPID> ppidSerde = StreamUtils.getJsonSerde(PPID.class);
 
 
     final StreamsBuilder builder = new StreamsBuilder();
@@ -39,46 +38,45 @@ public class LeaderboardTopology {
     public Topology buildTopology(final Map<String,Object> serdeConfig) {
         final Serde<ScoreCard> scoreCardSerde = StreamUtils.getAvroSerde(serdeConfig);
         final Serde<HistoricEntry> historicEntrySerde = StreamUtils.getAvroSerde(serdeConfig);
-        final Serde<PPID> ppidSerde = StreamUtils.getAvroSerde(serdeConfig);
         final KStream<Long, ScoreCard> scoreCardKStream = createScoreCardEventSource(scoreCardSerde);
         // stream processors
 
         final KStream<Long, ScoreCard> mScoreCardKStream = updateTimestamp(scoreCardKStream);
+        getAggregateHighestScoresForPlayer(mScoreCardKStream, scoreCardSerde).toStream(Named.as("agg001"));
+        getAggregateHighestScoresForProduct(mScoreCardKStream, scoreCardSerde).toStream(Named.as("agg002"));
+
         final KStream<PPID, ScoreCard> ppidScoreCardKStream = getPpidScoreCardKStream(mScoreCardKStream);
-        final KStream<PPID, HistoricEntry> ppidHistoricEntryKStream = getHistoricEntryKStream(historicEntrySerde, ppidSerde, ppidScoreCardKStream);
+        final KTable<PPID, HistoricEntry> ppidHistoricEntryKStream = getHistoricEntryKStream(historicEntrySerde, ppidSerde, ppidScoreCardKStream);
 
-        final KStream<Long, Leaderboard> playerAggStream = getAggregateHighestScoresForPlayer(mScoreCardKStream, scoreCardSerde).toStream(Named.as("agg001"));
-//        playerAggStream.print(Printed.toFile("src/main/resources/log/getAggregateHighestScoreGlobal.log"));
 
-        final  KStream<Long, Leaderboard> productAggStream = getAggregateHighestScoresForProduct(mScoreCardKStream, scoreCardSerde).toStream(Named.as("agg002"));
-//        productAggStream.print(Printed.toFile("src/main/resources/log/getAggregateHighestScoresForProduct.log"));
 
         final KStream<Long, LeaderboardHistoric> historicPlayerKStream = getAggregateHistoricHighestScoresForPlayer(historicEntrySerde, ppidHistoricEntryKStream).toStream(Named.as("agg-player-historic"));
-//        historicPlayerKStream.print(Printed.toSysOut());
+
         final KStream<Long, LeaderboardHistoric> historicProductKStream = getAggregateHistoricHighestScoresForProduct(historicEntrySerde, ppidHistoricEntryKStream).toStream(Named.as("agg-product-historic"));
         historicProductKStream.print(Printed.toSysOut());
-
-
         return builder.build();
     }
 
-    private static KTable<Long, LeaderboardHistoric> getAggregateHistoricHighestScoresForProduct(Serde<HistoricEntry> historicEntrySerde, KStream<PPID, HistoricEntry> ppidHistoricEntryKStream) {
+    private static KTable<Long, LeaderboardHistoric> getAggregateHistoricHighestScoresForProduct(Serde<HistoricEntry> historicEntrySerde, KTable<PPID, HistoricEntry> ppidHistoricEntryKStream) {
         return ppidHistoricEntryKStream
-                .selectKey((ppid, historicEntry) -> ppid.getProductId())
-                .groupByKey(Grouped.with(longSerdes, historicEntrySerde))
+                .toStream()
+                .selectKey((ppid, historicEntry) -> ppid.getProductId(), Named.as("lbs-selectkey-ppid-to-productId"))
+                .groupByKey(Grouped.with("lbs-groupbykey-post-ppid-to-productid",longSerdes, historicEntrySerde))
                 .aggregate(
                         LeaderboardHistoric::new,
                         (playerId, record, leaderboard) -> leaderboard.add(record),
+
                         Materialized.<Long, LeaderboardHistoric, KeyValueStore<Bytes, byte[]>>as(LeaderboardService.LEADERBOARDS_STATE_STORE_TOP_10_HISTORIC_SCORES_PRODUCT)
                                 .withKeySerde(longSerdes)
                                 .withValueSerde(leaderboardHistoricSerde)
                 );
     }
 
-    private static KTable<Long, LeaderboardHistoric> getAggregateHistoricHighestScoresForPlayer(Serde<HistoricEntry> historicEntrySerde, KStream<PPID, HistoricEntry> ppidHistoricEntryKStream) {
+    private static KTable<Long, LeaderboardHistoric> getAggregateHistoricHighestScoresForPlayer(Serde<HistoricEntry> historicEntrySerde, KTable<PPID, HistoricEntry> ppidHistoricEntryKStream) {
         return ppidHistoricEntryKStream
-                .selectKey((ppid, historicEntry) -> ppid.getPlayerId())
-                .groupByKey(Grouped.with(longSerdes, historicEntrySerde))
+                .toStream()
+                .selectKey((ppid, historicEntry) -> ppid.getPlayerId(), Named.as("lbs-selectkey-ppid-to-playerId"))
+                .groupByKey(Grouped.with("lbs-groupbykey-post-ppid-to-playerid",longSerdes, historicEntrySerde))
                 .aggregate(
                         LeaderboardHistoric::new,
                         (playerId, record, leaderboard) -> leaderboard.add(record),
@@ -89,10 +87,10 @@ public class LeaderboardTopology {
     }
 
 
-    private static KStream<PPID, HistoricEntry> getHistoricEntryKStream(Serde<HistoricEntry> historicEntrySerde, Serde<PPID> ppidSerde, KStream<PPID, ScoreCard> ppidScoreCardKStream) {
+    private static KTable<PPID, HistoricEntry> getHistoricEntryKStream(Serde<HistoricEntry> historicEntrySerde, Serde<PPID> ppidSerde, KStream<PPID, ScoreCard> ppidScoreCardKStream) {
         return ppidScoreCardKStream
-                .mapValues(scoreCard -> new HistoricEntry(scoreCard.getPlayer().getId(), scoreCard.getPlayer().getName(), scoreCard.getProduct().getId(), scoreCard.getProduct().getName(), scoreCard.getScore(), 0L))
-                .groupByKey(Grouped.with(ppidSerde, historicEntrySerde))
+                .mapValues(scoreCard -> new HistoricEntry(scoreCard.getPlayer().getId(), scoreCard.getPlayer().getName(), scoreCard.getProduct().getId(), scoreCard.getProduct().getName(), scoreCard.getScore(), 1L))
+                .groupByKey(Grouped.with("lbs-groupby-ppid", ppidSerde, historicEntrySerde))
                 .reduce(
                         (oldEntry, newEntry) -> {
                             oldEntry.setScore(oldEntry.getScore() + newEntry.getScore());
@@ -102,13 +100,12 @@ public class LeaderboardTopology {
                         Materialized.<PPID, HistoricEntry, KeyValueStore<Bytes, byte[]>>as(LeaderboardService.LEADERBOARDS_STATE_STORE_PPID_HISTORIC)
                                 .withKeySerde(ppidSerde)
                                 .withValueSerde(historicEntrySerde)
-                )
-                .toStream();
+                );
     }
 
     private static KStream<PPID, ScoreCard> getPpidScoreCardKStream(KStream<Long, ScoreCard> mScoreCardKStream) {
         return mScoreCardKStream
-                .selectKey((playerId, scoreCard) -> new PPID(playerId, scoreCard.getProduct().getId()));
+                .selectKey((playerId, scoreCard) -> new PPID(playerId, scoreCard.getProduct().getId()), Named.as("lbs-selectKey-playerId-to-ppid"));
     }
 
 
