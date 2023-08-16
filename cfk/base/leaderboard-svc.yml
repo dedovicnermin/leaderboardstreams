@@ -1,10 +1,17 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: leaderboards-svc
+  name: leaderboards-streams-svc
   labels:
     app: leaderboard-streams
 spec:
   clusterIP: None
   selector:
     app: leaderboard-streams
+  ports:
+    - port: 7000
+      name: rest
+    - port: 7778
+      name: exporter
+    - port: 7203
+      name: jmx

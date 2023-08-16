@@ -1,0 +1,6 @@
+src/main/datagen
+src/main/resources/mvn_schema_download
+rest.http
+.idea
+http-client.env.json
+README.md

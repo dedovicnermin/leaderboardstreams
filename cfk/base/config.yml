@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: leaderboard-streams-cfg
+data:
+  application.properties: |-
+    application.id=k8s-leaderboardstreams_001
+    state.dir=/mnt/data/leaderboardstreams
+    bootstrap.servers=kafka:9071
+    security.protocol=SSL
+    ssl.keystore.location=/mnt/sslcerts/keystore.jks
+    ssl.keystore.password=${file:/mnt/secrets/secrets.txt:sslPassword}
+    ssl.key.password=${file:/mnt/secrets/secrets.txt:sslPassword}
+    ssl.truststore.location=/mnt/sslcerts/truststore.jks
+    ssl.truststore.password=${file:/mnt/secrets/secrets.txt:sslPassword}
+    schema.registry.url=https://sr:8081
+    schema.registry.ssl.truststore.location=/mnt/sslcerts/truststore.jks
+    schema.registry.ssl.truststore.password=${file:/mnt/secrets/secrets.txt:sslPassword}
+    schema.registry.basic.auth.credentials.source=USER_INFO
+    schema.registry.basic.auth.user.info=${file:/mnt/secrets/secrets.txt:username}:${file:/mnt/secrets/secrets.txt:password}
+    processing.guarantee=exactly_once_v2
+    replication.factor=2
+    default.deserialization.exception.handler=io.nermdev.kafka.leaderboardstreams.framework.SCBDeserializationExceptionHandler
+    default.production.exception.handler=io.nermdev.kafka.leaderboardstreams.framework.SCBProductionExceptionHandler
+    #default.key.serde=org.apache.kafka.common.serialization.Serdes$StringSerde
+    #default.value.serde=org.apache.kafka.common.serialization.Serdes$StringSerde
+    producer.confluent.monitoring.interceptor.bootstrap.servers=kafka:9071
+    producer.confluent.monitoring.interceptor.security.protocol=SSL
+    producer.confluent.monitoring.interceptor.ssl.keystore.location=/mnt/sslcerts/keystore.jks
+    producer.confluent.monitoring.interceptor.ssl.keystore.password=${file:/mnt/secrets/secrets.txt:sslPassword}
+    producer.confluent.monitoring.interceptor.ssl.key.password=${file:/mnt/secrets/secrets.txt:sslPassword}
+    producer.confluent.monitoring.interceptor.ssl.truststore.location=/mnt/sslcerts/truststore.jks
+    producer.confluent.monitoring.interceptor.ssl.truststore.password=${file:/mnt/secrets/secrets.txt:sslPassword}
+    producer.confluent.monitoring.interceptor.client.id=leaderboardstreams-interceptor-producer
+    producer.interceptor.classes=io.confluent.monitoring.clients.interceptor.MonitoringProducerInterceptor
+    consumer.confluent.monitoring.interceptor.bootstrap.servers=kafka:9071
+    consumer.confluent.monitoring.interceptor.security.protocol=SSL
+    consumer.confluent.monitoring.interceptor.ssl.keystore.location=/mnt/sslcerts/keystore.jks
+    consumer.confluent.monitoring.interceptor.ssl.keystore.password=${file:/mnt/secrets/secrets.txt:sslPassword}
+    consumer.confluent.monitoring.interceptor.ssl.key.password=${file:/mnt/secrets/secrets.txt:sslPassword}
+    consumer.confluent.monitoring.interceptor.ssl.truststore.location=/mnt/sslcerts/truststore.jks
+    consumer.confluent.monitoring.interceptor.ssl.truststore.password=${file:/mnt/secrets/secrets.txt:sslPassword}
+    consumer.confluent.monitoring.interceptor.client.id=leaderboardstreams-interceptor-consumer
+    consumer.interceptor.classes=io.confluent.monitoring.clients.interceptor.MonitoringConsumerInterceptor
+    config.providers=file
+    config.providers.file.class=io.confluent.kafka.config.providers.FileConfigProvider

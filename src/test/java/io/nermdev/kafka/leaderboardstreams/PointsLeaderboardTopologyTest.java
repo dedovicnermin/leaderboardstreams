@@ -5,13 +5,14 @@ import io.nermdev.kafka.leaderboardstreams.models.json.Leaderboard;
 import io.nermdev.schemas.avro.leaderboards.Player;
 import io.nermdev.schemas.avro.leaderboards.Product;
 import io.nermdev.schemas.avro.leaderboards.ScoreCard;
-import io.nermdev.schemas.avro.leaderboards.ScoreEvent;
+
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.TestInputTopic;
 import org.apache.kafka.streams.TestOutputTopic;
+import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.TopologyTestDriver;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
@@ -23,13 +24,14 @@ import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Properties;
+import java.util.UUID;
 
 class PointsLeaderboardTopologyTest {
     Faker faker = Faker.instance();
     final Map<String, Object> serdeConfig = Map.of(
             StreamsConfig.APPLICATION_ID_CONFIG, "leaderboards",
             "schema.registry.url", "mock://leaderboards",
-            "state.dir", "/tmp/kafka-streams-leaderboard-tests"
+            "state.dir", "/tmp/kafka-streams-leaderboard-tests"+ UUID.randomUUID()
     );
     final Serde<ScoreCard> scorePlayerSerde = StreamUtils.getAvroSerde(serdeConfig);
     final Serde<Leaderboard> leaderboardSerde = StreamUtils.getJsonSerde(Leaderboard.class);
@@ -43,7 +45,9 @@ class PointsLeaderboardTopologyTest {
     void setup() {
         final Properties properties = new Properties();
         properties.putAll(serdeConfig);
-        testDriver = new TopologyTestDriver(new LeaderboardTopology().buildTopology(serdeConfig).addSink("test.sink", "outbound.test", Serdes.Long().serializer(), leaderboardSerde.serializer(),"agg001"), properties);
+        final Topology topology = new LeaderboardTopology().buildTopology(serdeConfig);
+        System.out.println(topology.describe());
+        testDriver = new TopologyTestDriver(topology.addSink("test.sink", "outbound.test", Serdes.Long().serializer(), leaderboardSerde.serializer(),"agg001"), properties);
         scoreCardTestInputTopic = testDriver.createInputTopic("leaderboard.scorecards", Serdes.Long().serializer(), scorePlayerSerde.serializer());
     }
 

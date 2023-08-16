@@ -1,39 +1,92 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: leaderboards
+  name: leaderboard-streams
+  annotations:
+    prometheus.io/port: "7778"
+    prometheus.io/scrape: "true"
 spec:
   selector:
     matchLabels:
       app: leaderboard-streams
-  serviceName: leaderboards-svc
+  serviceName: leaderboard-streams-svc
+  replicas: 2
+  podManagementPolicy: Parallel
+
+
+  template:
+    metadata:
+      annotations:
+        prometheus.io/port: "7778"
+        prometheus.io/scrape: "true"
+      labels:
+        app: leaderboard-streams
+    spec:
+      securityContext:
+        fsGroup: 54321
+      containers:
+        - name: leaderboardstreams
+          image: dedovicnermin/leaderboardstreams
+          args:
+            - /mnt/application/application.properties
+          ports:
+            - containerPort: 7000
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          volumeMounts:
+            - mountPath: /mnt/data/leaderboardstreams
+              name: leaderboard-streams-state
+            - mountPath: /mnt/application
+              name: appconfig
+            - mountPath: /mnt/sslcerts
+              name: tls
+
+
+
+          resources:
+            requests:
+              cpu: 500m
+              memory: 216Mi
+            limits:
+              cpu: 1000m
+              memory: 532Mi
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app
+                    operator: In
+                    values:
+                      - leaderboard-streams
+              topologyKey: "kubernetes.io/hostname"
+
+      volumes:
+        - name: appconfig
+          configMap:
+            name: leaderboard-streams-cfg
+        - name: tls
+          secret:
+            secretName: tls-nermin
+
   volumeClaimTemplates:
     - metadata:
-        name: leaderboards-state
+        name: leaderboard-streams-state
       spec:
+        storageClassName: cfk-storage-delete
         accessModes:
           - ReadWriteOnce
         resources:
           requests:
-            storage: 1Gi
-
-  template:
-    metadata:
-      labels:
-        app: leaderboard-streams
-    spec:
-      containers:
-        - name: leaderboardstreams
-          image: dedovicnermin/leaderboard.streams:0.0.1
-          ports:
-            - containerPort: 7000
-
-          volumeMounts:
-            - mountPath: /data/leaderboards/state
-              name: leaderboards-state
-          resources:
-            requests:
-              cpu: 216m
-              memory: 516Mi
-
-
+            storage: 2Gi
