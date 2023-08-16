@@ -48,15 +48,15 @@ public class LeaderboardTopology {
         final KStream<PPID, HistoricEntry> ppidHistoricEntryKStream = getHistoricEntryKStream(historicEntrySerde, ppidSerde, ppidScoreCardKStream);
 
         final KStream<Long, Leaderboard> playerAggStream = getAggregateHighestScoresForPlayer(mScoreCardKStream, scoreCardSerde).toStream(Named.as("agg001"));
-        playerAggStream.print(Printed.toFile("src/main/resources/log/getAggregateHighestScoreGlobal.log"));
+//        playerAggStream.print(Printed.toFile("src/main/resources/log/getAggregateHighestScoreGlobal.log"));
 
         final  KStream<Long, Leaderboard> productAggStream = getAggregateHighestScoresForProduct(mScoreCardKStream, scoreCardSerde).toStream(Named.as("agg002"));
-        productAggStream.print(Printed.toFile("src/main/resources/log/getAggregateHighestScoresForProduct.log"));
+//        productAggStream.print(Printed.toFile("src/main/resources/log/getAggregateHighestScoresForProduct.log"));
 
         final KStream<Long, LeaderboardHistoric> historicPlayerKStream = getAggregateHistoricHighestScoresForPlayer(historicEntrySerde, ppidHistoricEntryKStream).toStream(Named.as("agg-player-historic"));
-        historicPlayerKStream.print(Printed.toFile("src/main/resources/log/getAggregateHighestHistoricScoresForPlayer.log"));
+//        historicPlayerKStream.print(Printed.toSysOut());
         final KStream<Long, LeaderboardHistoric> historicProductKStream = getAggregateHistoricHighestScoresForProduct(historicEntrySerde, ppidHistoricEntryKStream).toStream(Named.as("agg-product-historic"));
-        historicProductKStream.print(Printed.toFile("src/main/resources/log/getAggregateHighestHistoricScoresForProduct.log"));
+        historicProductKStream.print(Printed.toSysOut());
 
 
         return builder.build();
