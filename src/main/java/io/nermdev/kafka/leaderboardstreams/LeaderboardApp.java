@@ -2,6 +2,7 @@ package io.nermdev.kafka.leaderboardstreams;
 import io.nermdev.kafka.leaderboardstreams.framework.GlobalStateRestoreListener;
 import io.nermdev.kafka.leaderboardstreams.framework.SCBUncaughtExceptionHandler;
 import io.nermdev.kafka.leaderboardstreams.framework.StreamAppStateListener;
+import io.nermdev.kafka.leaderboardstreams.utils.StreamUtils;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;

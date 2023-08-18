@@ -1,4 +1,4 @@
-package io.nermdev.kafka.leaderboardstreams;
+package io.nermdev.kafka.leaderboardstreams.utils;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 

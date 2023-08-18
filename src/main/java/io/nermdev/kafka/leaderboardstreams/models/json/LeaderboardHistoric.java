@@ -1,21 +1,18 @@
 package io.nermdev.kafka.leaderboardstreams.models.json;
 
 import io.nermdev.schemas.avro.leaderboards.HistoricEntry;
-import lombok.Data;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.TreeSet;
-import java.util.stream.Collectors;
+import java.util.function.ToDoubleFunction;
 
-@Data
-public class LeaderboardHistoric {
-
-    static final Comparator<HistoricEntry> comparator = Comparator.comparingDouble(HistoricEntry::getScore);
-    private final TreeSet<HistoricEntry> treeSet;
+public class LeaderboardHistoric extends Leaderboard<HistoricEntry> {
 
     public LeaderboardHistoric() {
-        this.treeSet = new TreeSet<>(comparator);
+        super();
+    }
+
+    @Override
+    protected ToDoubleFunction<HistoricEntry> getDoubleFunction() {
+        return HistoricEntry::getScore;
     }
 
     public LeaderboardHistoric add(final HistoricEntry record) {
@@ -31,7 +28,4 @@ public class LeaderboardHistoric {
         return this;
     }
 
-    public List<HistoricEntry> toList() {
-        return treeSet.stream().sorted(comparator).collect(Collectors.toUnmodifiableList());
-    }
 }

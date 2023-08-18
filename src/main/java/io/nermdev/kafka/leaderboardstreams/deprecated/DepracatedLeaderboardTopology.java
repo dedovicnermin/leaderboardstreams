@@ -1,4 +1,4 @@
-package io.nermdev.kafka.leaderboardstreams;
+package io.nermdev.kafka.leaderboardstreams.deprecated;
 
 import io.nermdev.kafka.leaderboardstreams.models.json.ScorePlayerRecord;
 import io.nermdev.schemas.avro.leaderboards.Player;

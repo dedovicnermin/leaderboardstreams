@@ -5,6 +5,7 @@ import io.javalin.Javalin;
 import io.javalin.http.Context;
 import io.nermdev.kafka.leaderboardstreams.models.json.Leaderboard;
 import io.nermdev.kafka.leaderboardstreams.models.json.LeaderboardHistoric;
+import io.nermdev.kafka.leaderboardstreams.utils.IgnoreSchemaPropertyMixinConfig;
 import io.nermdev.schemas.avro.leaderboards.ScoreCard;
 import lombok.SneakyThrows;
 import okhttp3.OkHttpClient;

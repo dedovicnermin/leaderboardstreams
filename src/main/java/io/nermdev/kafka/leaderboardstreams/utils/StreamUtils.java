@@ -1,4 +1,4 @@
-package io.nermdev.kafka.leaderboardstreams;
+package io.nermdev.kafka.leaderboardstreams.utils;
 
 import io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde;
 import io.nermdev.kafka.leaderboardstreams.serde.JsonDeserializer;
@@ -15,8 +15,6 @@ import java.util.Properties;
 
 public class StreamUtils {
     private StreamUtils(){}
-
-    public static final String PROPERTIES_FILE_PATH = "src/main/resources/streams.properties";
 
     public static void loadConfig(final String file, final Properties properties) {
         try (

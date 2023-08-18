@@ -1,7 +1,8 @@
 package io.nermdev.kafka.leaderboardstreams;
 
 import com.github.javafaker.Faker;
-import io.nermdev.kafka.leaderboardstreams.models.json.Leaderboard;
+import io.nermdev.kafka.leaderboardstreams.models.json.LeaderboardInstance;
+import io.nermdev.kafka.leaderboardstreams.utils.StreamUtils;
 import io.nermdev.schemas.avro.leaderboards.Player;
 import io.nermdev.schemas.avro.leaderboards.Product;
 import io.nermdev.schemas.avro.leaderboards.ScoreCard;
@@ -15,6 +16,7 @@ import org.apache.kafka.streams.TestOutputTopic;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.TopologyTestDriver;
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -22,39 +24,28 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.time.LocalDate;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 
 class PointsLeaderboardTopologyTest {
     Faker faker = Faker.instance();
-    final Map<String, Object> serdeConfig = Map.of(
+    static final Map<String, Object> serdeConfig = Map.of(
             StreamsConfig.APPLICATION_ID_CONFIG, "leaderboards",
             "schema.registry.url", "mock://leaderboards",
             "state.dir", "/tmp/kafka-streams-leaderboard-tests"+ UUID.randomUUID()
     );
-    final Serde<ScoreCard> scorePlayerSerde = StreamUtils.getAvroSerde(serdeConfig);
-    final Serde<Leaderboard> leaderboardSerde = StreamUtils.getJsonSerde(Leaderboard.class);
+    static final Serde<Long> longSerde = Serdes.Long();
+    static final Serde<ScoreCard> scorePlayerSerde = StreamUtils.getAvroSerde(serdeConfig);
+    static final Serde<LeaderboardInstance> leaderboardSerde = StreamUtils.getJsonSerde(LeaderboardInstance.class);
 
     TopologyTestDriver testDriver;
+    static Topology topology;
     TestInputTopic<Long, ScoreCard> scoreCardTestInputTopic;
-    TestOutputTopic<?, ?> outputTopic;
-    final String outputTestTopicName = "outbound.test";
+    TestOutputTopic<?, LeaderboardInstance> outputTopic;
+    static final String outputTestTopicName = "outbound.test";
 
-    @BeforeEach
-    void setup() {
-        final Properties properties = new Properties();
-        properties.putAll(serdeConfig);
-        final Topology topology = new LeaderboardTopology().buildTopology(serdeConfig);
-        System.out.println(topology.describe());
-        testDriver = new TopologyTestDriver(topology.addSink("test.sink", "outbound.test", Serdes.Long().serializer(), leaderboardSerde.serializer(),"agg001"), properties);
-        scoreCardTestInputTopic = testDriver.createInputTopic("leaderboard.scorecards", Serdes.Long().serializer(), scorePlayerSerde.serializer());
-    }
-
-    @AfterEach
-    void shutdown() {
-        testDriver.close();
-    }
 
     @ParameterizedTest
     @ValueSource(doubles = {1.24, 4.50, 10, 43, 100})
@@ -68,7 +59,7 @@ class PointsLeaderboardTopologyTest {
                 .build();
         var sc2 = new ScoreCard(new Player(2L, "LOSER"), product, faker.number().randomDouble(3, 0, (long) winningScore), LocalDate.now().toString());
         var sc3 = new ScoreCard(new Player(3L, "LOSER"), product, faker.number().randomDouble(3, 1, (long) winningScore), LocalDate.now().toString());
-        outputTopic = testDriver.createOutputTopic(outputTestTopicName, Serdes.Long().deserializer(), leaderboardSerde.deserializer());
+        outputTopic = testDriver.createOutputTopic(outputTestTopicName, longSerde.deserializer(), leaderboardSerde.deserializer());
         scoreCardTestInputTopic.pipeKeyValueList(Arrays.asList(
                 new KeyValue<>(sc1.getPlayer().getId(), sc1),
                 new KeyValue<>( sc2.getPlayer().getId(),sc2),
@@ -76,5 +67,35 @@ class PointsLeaderboardTopologyTest {
         );
         Assertions.assertThat(outputTopic.getQueueSize()).isNotZero();
 
+
+        final List<LeaderboardInstance> actualOutputList = outputTopic.readValuesToList();
+        final LeaderboardInstance actualLeaderboard = actualOutputList.get(actualOutputList.size() - 1);
+        final List<ScoreCard> actualScorecards = actualLeaderboard.toList();
+        double maxScore = 0;
+        for (var scard : actualScorecards) {
+            if (scard.getScore() > maxScore) {
+                maxScore = scard.getScore();
+            }
+        }
+        Assertions.assertThat(actualScorecards.get(0).getScore()).isEqualTo(maxScore);
+    }
+
+    @BeforeEach
+    void setup() {
+        final Properties properties = new Properties();
+        properties.putAll(serdeConfig);
+        topology = new LeaderboardTopology().buildTopology(serdeConfig);
+        testDriver = new TopologyTestDriver(topology.addSink("test.sink", "outbound.test", longSerde.serializer(), leaderboardSerde.serializer(),"agg001"), properties);
+        scoreCardTestInputTopic = testDriver.createInputTopic("leaderboard.scorecards", longSerde.serializer(), scorePlayerSerde.serializer());
+    }
+
+    @AfterEach
+    void shutdown() {
+        testDriver.close();
+    }
+
+    @AfterAll
+    static void afterAll() {
+        System.out.println(topology.describe());
     }
 }
