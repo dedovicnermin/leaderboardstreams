@@ -1,3 +1,5 @@
+# Leaderboard Streams 
+[![Build status](https://badge.buildkite.com/780548948b795192adfbd7a189ed0e99047af82a6629e1a9dd.svg)](https://buildkite.com/nerm/leaderboardstreams)
 
 # Running
 TODO
