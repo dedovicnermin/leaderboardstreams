@@ -9,7 +9,7 @@ resources:
 
 images:
   - name: dedovicnermin/leaderboardstreams
-    newTag: 0.0.5
+    newTag: 0.0.6
 
 configMapGenerator:
   - name: leaderboard-streams-cfg

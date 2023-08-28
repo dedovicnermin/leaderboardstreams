@@ -5,6 +5,8 @@ metadata:
   annotations:
     prometheus.io/port: "7778"
     prometheus.io/scrape: "true"
+  labels:
+    app: leaderboard-streams
 spec:
   selector:
     matchLabels:

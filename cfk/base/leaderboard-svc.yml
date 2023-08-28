@@ -5,13 +5,15 @@ metadata:
   labels:
     app: leaderboard-streams
 spec:
-  clusterIP: None
   selector:
     app: leaderboard-streams
   ports:
     - port: 7000
       name: rest
+      protocol: TCP
     - port: 7778
       name: exporter
+      protocol: TCP
     - port: 7203
       name: jmx
+      protocol: TCP
